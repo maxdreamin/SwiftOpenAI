@@ -35,11 +35,12 @@ private let deviceCheckWarning = """
 extension Endpoint {
 
     private func urlComponents(
-       queryItems: [URLQueryItem])
+      serviceURL: String?,
+      queryItems: [URLQueryItem])
        -> URLComponents
     {
-       var components = URLComponents(string: "https://api.aiproxy.pro")!
-       components.path = path
+       var components = URLComponents(string: serviceURL ?? "https://api.aiproxy.pro")!
+       components.path = components.path.appending(path)
        if !queryItems.isEmpty {
           components.queryItems = queryItems
        }
@@ -48,6 +49,7 @@ extension Endpoint {
 
    func request(
       aiproxyPartialKey: String,
+      serviceURL: String?,
       clientID: String?,
       organizationID: String?,
       method: HTTPMethod,
@@ -56,7 +58,7 @@ extension Endpoint {
       betaHeaderField: String? = nil)
       async throws -> URLRequest
    {
-      var request = URLRequest(url: urlComponents(queryItems: queryItems).url!)
+      var request = URLRequest(url: urlComponents(serviceURL: serviceURL, queryItems: queryItems).url!)
       request.addValue("application/json", forHTTPHeaderField: "Content-Type")
       request.addValue(aiproxyPartialKey, forHTTPHeaderField: "aiproxy-partial-key")
       if let organizationID {
@@ -85,15 +87,16 @@ extension Endpoint {
 
    func multiPartRequest(
       aiproxyPartialKey: String,
+      serviceURL: String?,
       clientID: String?,
       organizationID: String?,
       method: HTTPMethod,
       params: MultipartFormDataParameters,
-      queryItems: [URLQueryItem] = [],
-      deviceCheckBypass: String? = nil)
+      queryItems: [URLQueryItem] = []
+   )
       async throws -> URLRequest
    {
-      var request = URLRequest(url: urlComponents(queryItems: queryItems).url!)
+      var request = URLRequest(url: urlComponents(serviceURL: serviceURL, queryItems: queryItems).url!)
       request.httpMethod = method.rawValue
       request.addValue(aiproxyPartialKey, forHTTPHeaderField: "aiproxy-partial-key")
       if let organizationID {
@@ -106,7 +109,7 @@ extension Endpoint {
           request.addValue(deviceCheckToken, forHTTPHeaderField: "aiproxy-devicecheck")
       }
 #if DEBUG && targetEnvironment(simulator)
-      if let deviceCheckBypass = deviceCheckBypass {
+      if let deviceCheckBypass = ProcessInfo.processInfo.environment["AIPROXY_DEVICE_CHECK_BYPASS"] {
          request.addValue(deviceCheckBypass, forHTTPHeaderField: "aiproxy-devicecheck-bypass")
       }
 #endif
